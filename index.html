@@ -1,0 +1,562 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Cometa Halley | Javier</title>
+    <!-- Cargamos Three.js desde CDN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Montserrat:wght@200;300;400;700&display=swap');
+        
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: #020308;
+            color: #fff;
+            font-family: 'Montserrat', sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            touch-action: none; 
+            -webkit-user-select: none;
+            user-select: none;
+        }
+
+        #canvas-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+        }
+
+        .ui-container {
+            position: relative;
+            z-index: 2;
+            background: rgba(10, 12, 20, 0.4);
+            backdrop-filter: blur(15px);
+            -webkit-backdrop-filter: blur(15px);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            border-radius: 24px;
+            padding: 45px 30px;
+            text-align: center;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+            width: 85%;
+            max-width: 550px;
+            transition: all 1.5s ease;
+            pointer-events: none; 
+        }
+
+        .ui-container > * {
+            pointer-events: auto;
+        }
+
+        h1 {
+            font-family: 'Cinzel', serif;
+            font-weight: 400;
+            font-size: 2.2rem;
+            letter-spacing: 5px;
+            margin-bottom: 5px;
+            text-transform: uppercase;
+            color: #ffffff;
+            transition: all 1.5s ease;
+        }
+
+        .subtitle {
+            font-weight: 300;
+            font-size: 0.85rem;
+            letter-spacing: 4px;
+            color: #818cf8;
+            margin-bottom: 35px;
+            text-transform: uppercase;
+            transition: color 1.5s ease;
+        }
+
+        .countdown {
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .time-box {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-width: 60px;
+        }
+
+        .number {
+            font-size: 2.5rem;
+            font-weight: 300;
+            color: #ffffff;
+            letter-spacing: 1px;
+            transition: color 1.5s ease;
+        }
+
+        .label {
+            font-size: 0.65rem;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            color: #6366f1;
+            margin-top: 5px;
+            font-weight: 400;
+            transition: color 1.5s ease;
+        }
+
+        .dedication {
+            margin-top: 40px;
+            font-weight: 300;
+            font-size: 0.95rem;
+            color: #c7d2fe;
+            line-height: 1.6;
+            padding-top: 25px;
+            border-top: 1px solid rgba(255,255,255,0.08);
+            transition: color 1.5s ease;
+        }
+
+        .name-highlight {
+            font-weight: 700;
+            color: #ffffff;
+            cursor: pointer; 
+            position: relative;
+            display: inline-block;
+            padding: 2px 6px;
+            background: rgba(255,255,255,0.05);
+            border-radius: 6px;
+            transition: all 0.3s ease;
+        }
+
+        .name-highlight:active {
+            transform: scale(0.95);
+        }
+
+        /* Mensaje Secreto de Cumpleaños */
+        #bday-message {
+            position: absolute;
+            top: -60px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-family: 'Cinzel', serif;
+            font-size: 1.2rem;
+            color: #ffbf00;
+            letter-spacing: 3px;
+            opacity: 0;
+            white-space: nowrap;
+            transition: all 1.5s ease;
+            text-shadow: 0 0 20px rgba(255, 191, 0, 0.5);
+            pointer-events: none;
+        }
+
+        /* EL MODO DORADO (EASTER EGG Y GRAN FINAL) */
+        .golden-mode {
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6), inset 0 0 30px rgba(255, 191, 0, 0.1);
+            border-color: rgba(255, 191, 0, 0.2);
+        }
+        .golden-mode h1 { color: #ffbf00; text-shadow: 0 0 20px rgba(255, 191, 0, 0.3); }
+        .golden-mode .subtitle { color: #ffdc73; }
+        .golden-mode .number { color: #ffbf00; text-shadow: 0 0 15px rgba(255, 191, 0, 0.4); }
+        .golden-mode .label { color: #d4af37; }
+        .golden-mode .dedication { color: #fef08a; }
+        .golden-mode .name-highlight { background: rgba(255, 191, 0, 0.15); color: #ffbf00;}
+        .golden-mode #bday-message {
+            opacity: 1;
+            top: -40px;
+        }
+
+        .hint {
+            position: absolute;
+            bottom: 25px;
+            width: 100%;
+            text-align: center;
+            z-index: 2;
+            font-size: 0.65rem;
+            color: rgba(255, 255, 255, 0.3);
+            letter-spacing: 3px;
+            pointer-events: none;
+            animation: pulseHint 3s infinite;
+        }
+
+        @keyframes pulseHint {
+            0%, 100% { opacity: 0.3; }
+            50% { opacity: 0.8; }
+        }
+
+        @media (min-width: 600px) {
+            .ui-container { padding: 50px 45px; max-width: 600px; }
+            h1 { font-size: 2.8rem; }
+            .number { font-size: 3.2rem; }
+            .time-box { min-width: 80px; }
+            .dedication { font-size: 1.05rem; }
+            #bday-message { font-size: 1.5rem; top: -70px; }
+            .golden-mode #bday-message { top: -50px; }
+        }
+    </style>
+</head>
+<body>
+
+    <div id="canvas-container"></div>
+    
+    <div class="ui-container" id="main-card">
+        <div id="bday-message">¡Felices años!</div>
+        
+        <h1>Perihelio</h1>
+        <div class="subtitle">El Retorno del Cometa</div>
+        
+        <div class="countdown" id="countdown">
+            <!-- Renderizado por JS -->
+        </div>
+        
+        <div class="dedication" id="dedication-text">
+            Para <span class="name-highlight" id="secret-trigger">Javier Halley</span>. 
+            <br><br>
+            Hoy, en tu vuelta al sol número <span id="dynamic-age"></span>, comienza esta cuenta regresiva. Cuando este reloj llegue a su fin, tendrás 75 años. 
+            <br><br>
+            <i>Un viaje de toda una vida. Una promesa escrita en las estrellas.</i>
+        </div>
+    </div>
+
+    <div class="hint">MANTÉN PRESIONADO EL ESPACIO</div>
+
+    <script>
+        window.onload = function() {
+            // --- ESTADO ---
+            let isGolden = false; 
+            let isWarping = false;
+            let warpFactor = 1;
+
+            // --- ESCENA 3D ---
+            const container = document.getElementById('canvas-container');
+            const scene = new THREE.Scene();
+            scene.fog = new THREE.FogExp2(0x020308, 0.001); // Neblina oscura
+
+            const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 2000);
+            camera.position.z = 400;
+
+            const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2)); 
+            container.appendChild(renderer.domElement);
+
+            // 1. CAMPO DE ESTRELLAS
+            const starsGeometry = new THREE.BufferGeometry();
+            const starsCount = 3500;
+            const posArray = new Float32Array(starsCount * 3);
+
+            for(let i = 0; i < starsCount * 3; i++) {
+                posArray[i] = (Math.random() - 0.5) * 2000;
+            }
+            starsGeometry.setAttribute('position', new THREE.BufferAttribute(posArray, 3));
+            
+            const starsMaterial = new THREE.PointsMaterial({
+                size: 1.2,
+                color: 0xffffff,
+                transparent: true,
+                opacity: 0.6,
+                blending: THREE.AdditiveBlending
+            });
+            const starMesh = new THREE.Points(starsGeometry, starsMaterial);
+            scene.add(starMesh);
+
+            // 2. EL COMETA HALLEY
+            const cometGroup = new THREE.Group();
+            scene.add(cometGroup);
+
+            // Núcleo
+            const cometGeometry = new THREE.SphereGeometry(2.5, 32, 32);
+            const cometMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff });
+            const cometCore = new THREE.Mesh(cometGeometry, cometMaterial);
+            cometGroup.add(cometCore);
+            
+            // Aura del núcleo
+            const auraGeometry = new THREE.SphereGeometry(8, 32, 32);
+            const auraMaterial = new THREE.MeshBasicMaterial({
+                color: 0x6366f1, // Azul índigo
+                transparent: true,
+                opacity: 0.3,
+                blending: THREE.AdditiveBlending
+            });
+            const aura = new THREE.Mesh(auraGeometry, auraMaterial);
+            cometGroup.add(aura);
+
+            // Estela Estática y Elegante
+            const tailParts = [];
+            const tailLength = 20;
+            for(let i = 1; i <= tailLength; i++) {
+                let size = 6 * (1 - i/tailLength);
+                let opacity = 0.25 * Math.pow(1 - i/tailLength, 2);
+                
+                let tailGeo = new THREE.SphereGeometry(size, 16, 16);
+                let tailMat = new THREE.MeshBasicMaterial({
+                    color: 0x818cf8,
+                    transparent: true,
+                    opacity: opacity,
+                    blending: THREE.AdditiveBlending
+                });
+                let part = new THREE.Mesh(tailGeo, tailMat);
+                part.position.set(0, 0, i * 5); 
+                part.scale.set(1, 1, 1.5); 
+                cometGroup.add(part);
+                tailParts.push(tailMat);
+            }
+
+            let time = 0;
+
+            // 3. EXPLOSIONES ELEGANTES AL TOCAR
+            const bursts = [];
+            function createBurst(x, y) {
+                const vec = new THREE.Vector3();
+                const pos = new THREE.Vector3();
+                vec.set((x / window.innerWidth) * 2 - 1, -(y / window.innerHeight) * 2 + 1, 0.5);
+                vec.unproject(camera);
+                vec.sub(camera.position).normalize();
+                let distance = 250; 
+                pos.copy(camera.position).add(vec.multiplyScalar(distance));
+
+                const burstGeo = new THREE.BufferGeometry();
+                const burstCount = 25; 
+                const bPos = new Float32Array(burstCount * 3);
+                const bVel = [];
+                for(let i=0; i<burstCount; i++) {
+                    bPos[i*3] = pos.x;
+                    bPos[i*3+1] = pos.y;
+                    bPos[i*3+2] = pos.z;
+                    let angle1 = Math.random() * Math.PI * 2;
+                    let angle2 = Math.random() * Math.PI * 2;
+                    let speed = Math.random() * 0.8 + 0.2;
+                    bVel.push({
+                        x: Math.cos(angle1) * speed,
+                        y: Math.sin(angle1) * speed,
+                        z: Math.sin(angle2) * speed
+                    });
+                }
+                burstGeo.setAttribute('position', new THREE.BufferAttribute(bPos, 3));
+                const burstMat = new THREE.PointsMaterial({
+                    size: 2, 
+                    color: isGolden ? 0xffbf00 : 0xa5b4fc, 
+                    transparent: true, 
+                    opacity: 0.8,
+                    blending: THREE.AdditiveBlending
+                });
+                const burstMesh = new THREE.Points(burstGeo, burstMat);
+                scene.add(burstMesh);
+                bursts.push({ mesh: burstMesh, velocities: bVel, life: 1.0 });
+            }
+
+            // 4. INTERACCIONES Y WARP SPEED
+            let targetMouseX = 0, targetMouseY = 0;
+            let currentMouseX = 0, currentMouseY = 0;
+            const windowHalfX = window.innerWidth / 2;
+            const windowHalfY = window.innerHeight / 2;
+
+            document.addEventListener('touchstart', (e) => {
+                if(e.target.id !== 'secret-trigger') {
+                    isWarping = true; // Activar propulsión
+                    createBurst(e.touches[0].clientX, e.touches[0].clientY);
+                }
+                targetMouseX = (e.touches[0].clientX - windowHalfX) * 0.02;
+                targetMouseY = (e.touches[0].clientY - windowHalfY) * 0.02;
+            }, {passive: false});
+
+            document.addEventListener('touchend', () => { isWarping = false; }); // Desactivar propulsión
+
+            document.addEventListener('touchmove', (e) => {
+                if(e.touches.length > 0) {
+                    targetMouseX = (e.touches[0].clientX - windowHalfX) * 0.02;
+                    targetMouseY = (e.touches[0].clientY - windowHalfY) * 0.02;
+                }
+            }, {passive: false});
+
+            document.addEventListener('mousedown', (e) => {
+                if(e.target.id !== 'secret-trigger') {
+                    isWarping = true; // Activar propulsión
+                    createBurst(e.clientX, e.clientY);
+                }
+            });
+            document.addEventListener('mouseup', () => { isWarping = false; }); // Desactivar propulsión
+            
+            document.addEventListener('mousemove', (e) => {
+                targetMouseX = (e.clientX - windowHalfX) * 0.02;
+                targetMouseY = (e.clientY - windowHalfY) * 0.02;
+            });
+
+            // 5. EL EASTER EGG DE JAVIER (Toque en el nombre)
+            // Solo lo inicializamos si no hemos llegado al 2061 aún
+            const secretTrigger = document.getElementById('secret-trigger');
+            if (secretTrigger) {
+                secretTrigger.addEventListener('click', () => {
+                    isGolden = !isGolden; 
+                    const card = document.getElementById('main-card');
+                    
+                    if(isGolden) {
+                        card.classList.add('golden-mode');
+                        auraMaterial.color.setHex(0xd4af37); 
+                        tailParts.forEach(mat => mat.color.setHex(0xffbf00));
+                    } else {
+                        card.classList.remove('golden-mode');
+                        auraMaterial.color.setHex(0x6366f1);
+                        tailParts.forEach(mat => mat.color.setHex(0x818cf8));
+                    }
+                });
+            }
+
+            // 6. BUCLE DE ANIMACIÓN
+            function animate() {
+                requestAnimationFrame(animate);
+
+                // Lógica de Warp Speed (Aceleración y Zoom)
+                if(isWarping) {
+                    warpFactor += (15 - warpFactor) * 0.05; // Acelera
+                    camera.position.z += (200 - camera.position.z) * 0.05; // Zoom in
+                    
+                    // Pequeña vibración en los números de la UI por la propulsión
+                    document.querySelectorAll('.time-box').forEach(box => {
+                        box.style.transform = `translate(${(Math.random()-0.5)*2}px, ${(Math.random()-0.5)*2}px)`;
+                    });
+                } else {
+                    warpFactor += (1 - warpFactor) * 0.05; // Vuelve a la calma
+                    camera.position.z += (400 - camera.position.z) * 0.05; // Zoom out
+                    
+                    document.querySelectorAll('.time-box').forEach(box => {
+                        box.style.transform = 'translate(0,0)';
+                    });
+                }
+
+                // Rotación del universo (afectada por Warp)
+                starMesh.rotation.y += 0.0003 * warpFactor * (isWarping ? 8 : 1);
+                starMesh.rotation.x += 0.0001 * warpFactor * (isWarping ? 8 : 1);
+
+                // Parallax relajado
+                currentMouseX += (targetMouseX - currentMouseX) * 0.02;
+                currentMouseY += (targetMouseY - currentMouseY) * 0.02;
+                camera.position.x += (currentMouseX - camera.position.x) * 0.05;
+                camera.position.y += (-currentMouseY - camera.position.y) * 0.05;
+                camera.lookAt(scene.position);
+
+                // Trayectoria Majestuosa del Cometa (afectada por Warp)
+                time += 0.0015 * warpFactor;
+                
+                const px = Math.sin(time) * 450;
+                const py = Math.cos(time * 0.5) * 100;
+                const pz = Math.sin(time * 0.3) * 200 - 150;
+                
+                cometGroup.position.set(px, py, pz);
+
+                const nextTime = time + 0.01;
+                const nextPx = Math.sin(nextTime) * 450;
+                const nextPy = Math.cos(nextTime * 0.5) * 100;
+                const nextPz = Math.sin(nextTime * 0.3) * 200 - 150;
+                
+                cometGroup.lookAt(nextPx, nextPy, nextPz);
+
+                // Animar explosiones
+                for(let i = bursts.length - 1; i >= 0; i--) {
+                    let b = bursts[i];
+                    b.life -= 0.015;
+                    if(b.life <= 0) {
+                        scene.remove(b.mesh);
+                        bursts.splice(i, 1);
+                    } else {
+                        let positions = b.mesh.geometry.attributes.position.array;
+                        for(let j=0; j<b.velocities.length; j++) {
+                            b.velocities[j].x *= 0.95;
+                            b.velocities[j].y *= 0.95;
+                            b.velocities[j].z *= 0.95;
+                            
+                            positions[j*3] += b.velocities[j].x;
+                            positions[j*3+1] += b.velocities[j].y;
+                            positions[j*3+2] += b.velocities[j].z;
+                        }
+                        b.mesh.geometry.attributes.position.needsUpdate = true;
+                        b.mesh.material.opacity = b.life * 0.8;
+                    }
+                }
+
+                renderer.render(scene, camera);
+            }
+
+            animate();
+
+            // Ajuste al rotar la pantalla
+            window.addEventListener('resize', () => {
+                camera.aspect = window.innerWidth / window.innerHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize(window.innerWidth, window.innerHeight);
+            });
+
+            // --- LÓGICA DE LA CUENTA REGRESIVA Y CUMPLEAÑOS EXACTO ---
+            const targetDate = new Date('July 28, 2061 00:00:00').getTime();
+            const birthDate = new Date('April 5, 1986 00:00:00'); // Fecha exacta de nacimiento
+
+            function updateCountdown() {
+                const today = new Date();
+                const now = today.getTime();
+                const distance = targetDate - now;
+                
+                // Cálculo matemático exacto de la edad (considera mes y día, no solo el año)
+                let currentAge = today.getFullYear() - birthDate.getFullYear();
+                const m = today.getMonth() - birthDate.getMonth();
+                if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+                    currentAge--;
+                }
+
+                // --- EL GRAN FINAL (AÑO 2061) ---
+                if (distance <= 0) {
+                    document.getElementById('main-card').innerHTML = `
+                        <h1 style="color: #ffbf00; text-shadow: 0 0 30px rgba(255, 191, 0, 0.6); font-size: 2.8rem;">¡El Día Llegó!</h1>
+                        <div class="subtitle" style="color: #ffdc73;">28 de Julio de 2061</div>
+                        <div class="number" style="font-size: 5rem; color: #ffffff; text-shadow: 0 0 20px rgba(255, 191, 0, 0.8); margin: 30px 0;">75 AÑOS</div>
+                        <div class="dedication" style="font-size: 1.15rem; color: #fef08a; border-top: none; padding-top: 0;">
+                            "¡Lo logramos, hermano! Estamos vivos y juntos viendo este evento espectacular. Te quiero muchísimo."
+                        </div>
+                    `;
+                    document.getElementById('main-card').classList.add('golden-mode');
+                    document.querySelector('.hint').style.display = 'none';
+                    
+                    // Convertir el cometa en oro permanentemente
+                    auraMaterial.color.setHex(0xd4af37); 
+                    tailParts.forEach(mat => mat.color.setHex(0xffbf00));
+                    return; // Detenemos la función para que no siga contando
+                }
+
+                // --- ACTUALIZACIÓN DINÁMICA DE LA EDAD ---
+                const ageElement = document.getElementById('dynamic-age');
+                if(ageElement) {
+                    ageElement.innerText = currentAge;
+                }
+                const bdayMessage = document.getElementById('bday-message');
+                if(bdayMessage) {
+                    bdayMessage.innerText = '¡Felices ' + currentAge + ' años!';
+                }
+
+                // --- MATEMÁTICA DEL RELOJ ---
+                const totalDays = Math.floor(distance / (1000 * 60 * 60 * 24));
+                const years = Math.floor(totalDays / 365);
+                const days = totalDays % 365;
+                const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+                const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+                const seconds = Math.floor((distance % (1000 * 60)) / 1000);
+
+                const formatNum = (num) => num.toString().padStart(2, '0');
+
+                const countdownEl = document.getElementById('countdown');
+                if(countdownEl) {
+                    countdownEl.innerHTML = `
+                        <div class="time-box"><div class="number">${years}</div><div class="label">Años</div></div>
+                        <div class="time-box"><div class="number">${formatNum(days)}</div><div class="label">Días</div></div>
+                        <div class="time-box"><div class="number">${formatNum(hours)}</div><div class="label">Horas</div></div>
+                        <div class="time-box"><div class="number">${formatNum(minutes)}</div><div class="label">Min</div></div>
+                        <div class="time-box"><div class="number">${formatNum(seconds)}</div><div class="label">Seg</div></div>
+                    `;
+                }
+            }
+            
+            setInterval(updateCountdown, 1000);
+            updateCountdown();
+        };
+    </script>
+</body>
+</html>
